@@ -241,21 +241,31 @@ HTML = """
             document.getElementById('feedItems').innerHTML = '';
 
             for (let i = 0; i < count; i++) {
-                const result = await postJson('/api/check', {
-                    mode: 'generate',
-                    count: 1,
-                    length: config.length,
-                    username_type: config.type
-                });
+                try {
+                    const result = await postJson('/api/check', {
+                        mode: 'generate',
+                        count: 1,
+                        length: config.length,
+                        username_type: config.type
+                    });
 
-                const data = result.results ? result.results[0] : null;
-                if (!data) {
-                    pushFeed('Unexpected response', 'ERROR');
-                } else {
+                    if (result.error) {
+                        pushFeed(`API Error: ${result.error}`, 'ERROR');
+                        continue;
+                    }
+
+                    const data = result.results && result.results[0] ? result.results[0] : null;
+                    if (!data) {
+                        pushFeed('No response data', 'ERROR');
+                        continue;
+                    }
+
                     const status = data.available ? 'AVAILABLE' : 'TAKEN';
                     if (data.available) available += 1;
                     checked += 1;
                     pushFeed(`${data.username}`, status);
+                } catch (e) {
+                    pushFeed(`Exception: ${e.message}`, 'ERROR');
                 }
                 updateStatus(checked, available);
                 await new Promise(resolve => setTimeout(resolve, delay));
